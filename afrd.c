@@ -927,50 +927,6 @@ static void handle_uevent (char *msg, ssize_t size)
 
 static void handle_uevents ()
 {
-	for (;;)
-	{
-		char msg [4096];
-		struct sockaddr_nl addr;
-		struct iovec iovec = {
-			.iov_base = &msg,
-			.iov_len = sizeof (msg) - 1,
-		};
-		union {
-			struct cmsghdr cmsghdr;
-			uint8_t buf [CMSG_SPACE (sizeof (struct ucred))];
-		} control = {};
-		struct msghdr msghdr = {
-			.msg_name = &addr,
-			.msg_namelen = sizeof (addr),
-			.msg_iov = &iovec,
-			.msg_iovlen = 1,
-			.msg_control = &control,
-			.msg_controllen = sizeof (control),
-		};
-
-		ssize_t size = recvmsg (g_uevent_sock, &msghdr, MSG_DONTWAIT);
-		if (size < 0) {
-			if (errno == EAGAIN)
-				return;
-
-			continue;
-		}
-
-		struct cmsghdr *cmsg;
-		struct ucred *ucred = NULL;
-		CMSG_FOREACH (cmsg, &msghdr) {
-			if (cmsg->cmsg_level == SOL_SOCKET &&
-			    cmsg->cmsg_type == SCM_CREDENTIALS &&
-			    cmsg->cmsg_len == CMSG_LEN (sizeof (struct ucred)))
-				ucred = (struct ucred*) CMSG_DATA (cmsg);
-		}
-
-		if (!ucred || ucred->pid != 0 || addr.nl_pid != 0)
-			continue;
-
-		msg [size] = 0;
-		handle_uevent (msg, size);
-	}
 }
 
 /* --------- * --------- * --------- * --------- * --------- * --------- */
